@@ -1,0 +1,8 @@
+﻿  InitShader.cpp
+  Lab FBO.cpp
+  GLM: perspective function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+  GLM: rotate function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+  LoadMesh.cpp
+  LoadTexture.cpp
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab fbo\include\freeimage.h : warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+LINK : fatal error LNK1181: cannot open input file 'avdevice.lib'

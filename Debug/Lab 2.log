@@ -1,0 +1,38 @@
+﻿  imgui.cpp
+  imgui_demo.cpp
+  imgui_draw.cpp
+  imgui_impl_glut.cpp
+  imgui_widgets.cpp
+  InitShader.cpp
+  lab_2.cpp
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\include\libavutil\rational.h : warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\lab_2.cpp(268): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\lab_2.cpp(269): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+  GLM: perspective function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+  GLM: rotate function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+  LoadMesh.cpp
+  LoadTexture.cpp
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\include\freeimage.h : warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+  VideoMux.cpp
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\include\libavutil\rational.h : warning C4819: The file contains a character that cannot be represented in the current code page (950). Save the file in Unicode format to prevent data loss
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(187): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(189): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(233): warning C4244: 'argument': conversion from 'double' to 'int64_t', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(264): warning C4244: '=': conversion from 'int64_t' to 'int', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(288): warning C4996: 'avcodec_encode_audio2': was declared deprecated
+  d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\include\libavcodec\avcodec.h(5283): note: see declaration of 'avcodec_encode_audio2'
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(389): warning C4244: 'argument': conversion from 'double' to 'int64_t', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(412): warning C4244: 'argument': conversion from 'int64_t' to 'int', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(438): warning C4996: 'avcodec_encode_video2': was declared deprecated
+  d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\include\libavcodec\avcodec.h(5322): note: see declaration of 'avcodec_encode_video2'
+  Generating Code...
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\lab 2\videomux.cpp(532): warning C4700: uninitialized local variable 'audio_codec' used
+  Lab 2.vcxproj -> D:\_Purdue\spring_2020\CGT521_Advanced_Real-Time_CG\Template\Debug\Lab 2.exe
