@@ -25,8 +25,9 @@ static const std::string vertex_shader("vertex_shader.glsl");
 static const std::string geometry_shader("geometry_shader.glsl");
 static const std::string fragment_shader("fragment_shader.glsl");
 
+static const float PI = 3.1415926535f;
+
 GLuint shader_program = -1;
-GLuint texture_id = -1; //Texture map for fish
 
 GLuint quad_vao = -1;
 GLuint quad_vbo = -1;
@@ -35,12 +36,25 @@ GLuint fbo_id = -1;       // Framebuffer object,
 GLuint rbo_id = -1;       // and Renderbuffer (for depth buffering)
 GLuint fbo_texture = -1;  // Texture rendered into.
 
-static const std::string mesh_name = "Amago0.obj";
-static const std::string texture_name = "AmagoT.bmp";
-MeshData mesh_data;
+static const std::string house_mesh_name = "Alpine_chalet.obj";
+static const std::string house_d_texture_name = "Alpine_chalet_textures/Diffuse_map.png";
+static const std::string house_n_texture_name = "Alpine_chalet_textures/Normal_map.png";
+static const std::string house_r_texture_name = "Alpine_chalet_textures/Roughness_map.png";
+static const std::string house_m_texture_name = "Alpine_chalet_textures/Metallic_map.png";
+
+GLuint house_d_texture_id = -1; //Texture map
+GLuint house_n_texture_id = -1;
+GLuint house_r_texture_id = -1;
+GLuint house_m_texture_id = -1;
+
+MeshData house_mesh_data;
 float time_sec = 0.0f;
 
-glm::vec2 mouse_pos;
+glm::vec2 cur_mouse_pos = glm::vec2(0.0f, 0.0f);
+glm::vec2 prev_mouse_pos = glm::vec2(0.0f, 0.0f);
+glm::vec2 cam_angle = glm::vec2(0.0f, 0.0f);
+float cam_dist = 2.0f;
+bool dragging = false;
 
 bool check_framebuffer_status();
 
@@ -85,8 +99,8 @@ void draw_pass_1()
 {
    const int pass = 1;
 
-   glm::mat4 M = glm::rotate(10.0f*time_sec, glm::vec3(0.0f, 1.0f, 0.0f))*glm::scale(glm::vec3(mesh_data.mScaleFactor));
-   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 1.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data.mScaleFactor));
+   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
    glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
 
    int pass_loc = glGetUniformLocation(shader_program, "pass");
@@ -96,7 +110,14 @@ void draw_pass_1()
    }
 
    glActiveTexture(GL_TEXTURE0);
-   glBindTexture(GL_TEXTURE_2D, texture_id);
+   glBindTexture(GL_TEXTURE_2D, house_d_texture_id);
+   glActiveTexture(GL_TEXTURE1);
+   glBindTexture(GL_TEXTURE_2D, house_n_texture_id);
+   glActiveTexture(GL_TEXTURE2);
+   glBindTexture(GL_TEXTURE_2D, house_r_texture_id);
+   glActiveTexture(GL_TEXTURE3);
+   glBindTexture(GL_TEXTURE_2D, house_m_texture_id);
+
    int PVM_loc = glGetUniformLocation(shader_program, "PVM");
    if(PVM_loc != -1)
    {
@@ -104,14 +125,32 @@ void draw_pass_1()
       glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
    }
 
-   int tex_loc = glGetUniformLocation(shader_program, "texture");
-   if(tex_loc != -1)
+   int d_tex_loc = glGetUniformLocation(shader_program, "d_texture");
+   if(d_tex_loc != -1)
    {
-      glUniform1i(tex_loc, 0); // we bound our texture to texture unit 0
+      glUniform1i(d_tex_loc, 0); // we bound our texture to texture unit 0
    }
 
-   glBindVertexArray(mesh_data.mVao);
-	glDrawElements(GL_TRIANGLES, mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);
+   int n_tex_loc = glGetUniformLocation(shader_program, "n_texture");
+   if (n_tex_loc != -1)
+   {
+	   glUniform1i(n_tex_loc, 1); // we bound our texture to texture unit 0
+   }
+
+   int r_tex_loc = glGetUniformLocation(shader_program, "r_texture");
+   if (r_tex_loc != -1)
+   {
+	   glUniform1i(r_tex_loc, 2); // we bound our texture to texture unit 0
+   }
+
+   int m_tex_loc = glGetUniformLocation(shader_program, "m_texture");
+   if (m_tex_loc != -1)
+   {
+	   glUniform1i(m_tex_loc, 3); // we bound our texture to texture unit 0
+   }
+
+   glBindVertexArray(house_mesh_data.mVao);
+	glDrawElements(GL_TRIANGLES, house_mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);
 
 }
 
@@ -151,8 +190,10 @@ void display()
 
    glUseProgram(shader_program);
 
-   glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
-   glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
+   //glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
+   //glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
+   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   glDrawBuffer(GL_BACK); // Render to back buffer.
 
    //Make the viewport match the FBO texture size.
    int tex_w, tex_h;
@@ -165,7 +206,7 @@ void display()
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Lab assignment: don't forget to also clear depth
    draw_pass_1();
          
-   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   /*glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    glDrawBuffer(GL_BACK); // Render to back buffer.
 
    const int w = glutGet(GLUT_WINDOW_WIDTH);
@@ -184,7 +225,7 @@ void display()
 	   glReadBuffer(GL_BACK);
 	   read_frame_to_encode(&rgb, &pixels, w, h);
 	   encode_frame(rgb);
-   }
+   }*/
 
    glutSwapBuffers();
 }
@@ -204,7 +245,7 @@ void idle()
    int mouse_pos_loc = glGetUniformLocation(shader_program, "mouse_pos");
    if (mouse_pos_loc != -1)
    {
-	   glUniform2f(mouse_pos_loc, mouse_pos.x, mouse_pos.y);
+	   glUniform2f(mouse_pos_loc, cur_mouse_pos.x, cur_mouse_pos.y);
    }
 
    srand((unsigned)time(NULL));
@@ -223,7 +264,7 @@ void idle()
 
 void reload_shader()
 {
-   GLuint new_shader = InitShader(vertex_shader.c_str(), fragment_shader.c_str());
+   GLuint new_shader = InitShader(vertex_shader.c_str(), geometry_shader.c_str(), fragment_shader.c_str());
 
    if(new_shader == -1) // loading failed
    {
@@ -231,7 +272,7 @@ void reload_shader()
    }
    else
    {
-      glClearColor(0.25f, 0.3f, 0.4f, 0.0f);
+      glClearColor(1.0f, 0.98f, 0.8f, 0.0f);
 
       if(shader_program != -1)
       {
@@ -239,9 +280,9 @@ void reload_shader()
       }
       shader_program = new_shader;
 
-      if(mesh_data.mVao != -1)
+      if(house_mesh_data.mVao != -1)
       {
-         BufferIndexedVerts(mesh_data);
+         BufferIndexedVerts(house_mesh_data);
       }
    }
 }
@@ -265,13 +306,31 @@ void keyboard(unsigned char key, int x, int y)
 void motion(int x, int y)
 {
 	ImGui_ImplGlut_MouseMotionCallback(x, y);
-	mouse_pos.x = x;
-	mouse_pos.y = y;
+
+	prev_mouse_pos = cur_mouse_pos;
+	cur_mouse_pos.x = x;
+	cur_mouse_pos.y = y;
+	if (dragging)
+	{
+		cam_angle += 0.02f * (cur_mouse_pos - prev_mouse_pos);
+		if (cam_angle.x > 2.0 * PI)
+			cam_angle.x -= 2.0 * PI;
+		else if (cam_angle.x < -2.0f * PI)
+			cam_angle.x += 2.0 * PI;
+		if (cam_angle.y > 0.4999f * PI)
+			cam_angle.y = 0.4999f * PI;
+		else if (cam_angle.y < -0.4999f * PI)
+			cam_angle.y = -0.4999f * PI;
+	}
 }
 
 void mouse(int button, int state, int x, int y)
 {
 	ImGui_ImplGlut_MouseButtonCallback(button, state);
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+		dragging = true;
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
+		dragging = false;
 }
 
 void printGlInfo()
@@ -291,8 +350,11 @@ void initOpenGl()
    reload_shader();
 
    //mesh and texture for pass 1
-   mesh_data = LoadMesh(mesh_name);
-   texture_id = LoadTexture(texture_name.c_str());
+   house_mesh_data = LoadMesh(house_mesh_name);
+   house_d_texture_id = LoadTexture(house_d_texture_name.c_str());
+   house_n_texture_id = LoadTexture(house_n_texture_name.c_str());
+   house_r_texture_id = LoadTexture(house_r_texture_name.c_str());
+   house_m_texture_id = LoadTexture(house_m_texture_name.c_str());
 
    //mesh for pass 2 (full screen quadrilateral)
    glGenVertexArrays(1, &quad_vao);
@@ -312,8 +374,8 @@ void initOpenGl()
 	   glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, 0, 0);
    }
   
-   const int w = glutGet(GLUT_SCREEN_WIDTH);
-   const int h = glutGet(GLUT_SCREEN_HEIGHT);
+   const int w = glutGet(GLUT_WINDOW_WIDTH);
+   const int h = glutGet(GLUT_WINDOW_HEIGHT);
    //Create texture to render pass 1 into.
    //Lab assignment: make the texture width and height be the window width and height.
    glGenTextures(1, &fbo_texture);
