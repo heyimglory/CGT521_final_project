@@ -21,7 +21,7 @@ void main(void)
 	}
 	else if(pass == 2)
 	{
-		fragcolor = texelFetch(d_texture, ivec2(gl_FragCoord.x, gl_FragCoord.y), 0);
+		fragcolor = texelFetch(d_texture, ivec2(1024 * tex_coord.x, 768 * tex_coord.y), 0);
 	}
 	else
 	{

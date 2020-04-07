@@ -15,9 +15,9 @@ void main(void)
 		gl_Position = PVM*vec4(pos_attrib, 1.0);
 		tex_coord_v = tex_coord_attrib;
 	}
-	else
+	else if(pass == 2)
 	{
 		gl_Position = vec4(pos_attrib, 1.0);
-      tex_coord_v = 0.5*pos_attrib.xy + vec2(0.5);
+		tex_coord_v = 0.5*pos_attrib.xy + vec2(0.5);
 	}
 }

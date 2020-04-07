@@ -92,6 +92,8 @@ void draw_gui()
 
 	ImGui::Checkbox("Edge Detection", &edge_detect);
 
+	ImGui::Image((void*)fbo_texture, ImVec2(102, 76));
+
 	ImGui::Render();
 }
 
@@ -150,7 +152,7 @@ void draw_pass_1()
    }
 
    glBindVertexArray(house_mesh_data.mVao);
-	glDrawElements(GL_TRIANGLES, house_mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);
+   glDrawElements(GL_TRIANGLES, house_mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);
 
 }
 
@@ -165,11 +167,10 @@ void draw_pass_2()
 
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, fbo_texture);
-
    int tex_loc = glGetUniformLocation(shader_program, "texture");
-   if(tex_loc != -1)
+   if (tex_loc != -1)
    {
-      glUniform1i(tex_loc, 0); // we bound our texture to texture unit 0
+	   glUniform1i(tex_loc, 0); // we bound our texture to texture unit 0
    }
 
    int edge_loc = glGetUniformLocation(shader_program, "edge_detect");
@@ -179,7 +180,9 @@ void draw_pass_2()
    }
 
    glBindVertexArray(quad_vao);
-   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+   glDrawArrays(GL_TRIANGLES, 0, 6);
+   /*glBindVertexArray(house_mesh_data.mVao);
+   glDrawElements(GL_TRIANGLES, house_mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);*/
 
 }
 
@@ -190,10 +193,10 @@ void display()
 
    glUseProgram(shader_program);
 
-   //glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
-   //glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
-   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
-   glDrawBuffer(GL_BACK); // Render to back buffer.
+   //glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   //glDrawBuffer(GL_BACK); // Render to back buffer.
+   glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
+   glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
 
    //Make the viewport match the FBO texture size.
    int tex_w, tex_h;
@@ -206,7 +209,7 @@ void display()
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Lab assignment: don't forget to also clear depth
    draw_pass_1();
          
-   /*glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    glDrawBuffer(GL_BACK); // Render to back buffer.
 
    const int w = glutGet(GLUT_WINDOW_WIDTH);
@@ -225,7 +228,7 @@ void display()
 	   glReadBuffer(GL_BACK);
 	   read_frame_to_encode(&rgb, &pixels, w, h);
 	   encode_frame(rgb);
-   }*/
+   }
 
    glutSwapBuffers();
 }
@@ -247,19 +250,6 @@ void idle()
    {
 	   glUniform2f(mouse_pos_loc, cur_mouse_pos.x, cur_mouse_pos.y);
    }
-
-   srand((unsigned)time(NULL));
-   int glitch[720];
-   for (int i = 0; i < 720; i++)
-   {
-	   glitch[i] = rand() % 800;
-   }
-   int glitch_loc = glGetUniformLocation(shader_program, "glitch_arr");
-   if (glitch_loc != -1)
-   {
-	   glUniform1iv(glitch_loc, 720, glitch);
-   }
-
 }
 
 void reload_shader()
@@ -331,6 +321,16 @@ void mouse(int button, int state, int x, int y)
 		dragging = true;
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
 		dragging = false;
+	if (button == 3)
+	{
+		if (cam_dist > 0.7f)
+			cam_dist -= 0.1f;
+	}
+	if (button == 4)
+	{
+		if (cam_dist < 3.0f)
+			cam_dist += 0.1f;
+	}
 }
 
 void printGlInfo()
@@ -360,7 +360,7 @@ void initOpenGl()
    glGenVertexArrays(1, &quad_vao);
    glBindVertexArray(quad_vao);
 
-   float vertices[] = {1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f};
+   float vertices[] = {1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f};
 
    //create vertex buffers for vertex coords
    glGenBuffers(1, &quad_vbo);
