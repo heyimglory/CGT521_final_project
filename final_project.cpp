@@ -21,20 +21,25 @@
 #include "VideoMux.h"
 #include "imgui_impl_glut.h"
 
-static const std::string vertex_shader("vertex_shader.glsl");
-static const std::string geometry_shader("geometry_shader.glsl");
-static const std::string fragment_shader("fragment_shader.glsl");
+static const std::string vertex_shader1("vertex_shader1.glsl");
+static const std::string fragment_shader1("fragment_shader1.glsl");
+
+static const std::string vertex_shader2("vertex_shader2.glsl");
+static const std::string geometry_shader2("geometry_shader2.glsl");
+static const std::string fragment_shader2("fragment_shader2.glsl");
 
 static const float PI = 3.1415926535f;
 
-GLuint shader_program = -1;
+GLuint shader_program1 = -1;
+GLuint shader_program2 = -1;
 
 GLuint quad_vao = -1;
 GLuint quad_vbo = -1;
 
 GLuint fbo_id = -1;       // Framebuffer object,
 GLuint rbo_id = -1;       // and Renderbuffer (for depth buffering)
-GLuint fbo_texture = -1;  // Texture rendered into.
+GLuint original_render_texture = -1;  // Texture rendered into.
+GLuint original_depth_texture = -1;  // Texture rendered into.
 
 static const std::string house_mesh_name = "Alpine_chalet.obj";
 static const std::string house_d_texture_name = "Alpine_chalet_textures/Diffuse_map.png";
@@ -47,7 +52,8 @@ GLuint house_n_texture_id = -1;
 GLuint house_r_texture_id = -1;
 GLuint house_m_texture_id = -1;
 
-MeshData house_mesh_data;
+MeshData house_mesh_data1;
+MeshData house_mesh_data2;
 float time_sec = 0.0f;
 
 glm::vec2 cur_mouse_pos = glm::vec2(0.0f, 0.0f);
@@ -59,7 +65,6 @@ bool dragging = false;
 bool check_framebuffer_status();
 
 bool recording = false;
-bool edge_detect = false;
 
 void draw_gui()
 {
@@ -79,7 +84,6 @@ void draw_gui()
 			recording = true;
 			start_encoding(video_filename, w, h); //Uses ffmpeg
 		}
-
 	}
 	else
 	{
@@ -90,9 +94,9 @@ void draw_gui()
 		}
 	}
 
-	ImGui::Checkbox("Edge Detection", &edge_detect);
-
-	ImGui::Image((void*)fbo_texture, ImVec2(102, 76));
+	ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
+	ImGui::SameLine(150);
+	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));
 
 	ImGui::Render();
 }
@@ -101,11 +105,11 @@ void draw_pass_1()
 {
    const int pass = 1;
 
-   glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data.mScaleFactor));
+   glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
    glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
    glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
 
-   int pass_loc = glGetUniformLocation(shader_program, "pass");
+   int pass_loc = glGetUniformLocation(shader_program1, "pass");
    if(pass_loc != -1)
    {
       glUniform1i(pass_loc, pass);
@@ -120,69 +124,84 @@ void draw_pass_1()
    glActiveTexture(GL_TEXTURE3);
    glBindTexture(GL_TEXTURE_2D, house_m_texture_id);
 
-   int PVM_loc = glGetUniformLocation(shader_program, "PVM");
+   int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
    if(PVM_loc != -1)
    {
       glm::mat4 PVM = P*V*M;
       glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
    }
 
-   int d_tex_loc = glGetUniformLocation(shader_program, "d_texture");
+   int d_tex_loc = glGetUniformLocation(shader_program1, "d_texture");
    if(d_tex_loc != -1)
    {
       glUniform1i(d_tex_loc, 0); // we bound our texture to texture unit 0
    }
 
-   int n_tex_loc = glGetUniformLocation(shader_program, "n_texture");
+   int n_tex_loc = glGetUniformLocation(shader_program1, "n_texture");
    if (n_tex_loc != -1)
    {
-	   glUniform1i(n_tex_loc, 1); // we bound our texture to texture unit 0
+	   glUniform1i(n_tex_loc, 1);
    }
 
-   int r_tex_loc = glGetUniformLocation(shader_program, "r_texture");
+   int r_tex_loc = glGetUniformLocation(shader_program1, "r_texture");
    if (r_tex_loc != -1)
    {
-	   glUniform1i(r_tex_loc, 2); // we bound our texture to texture unit 0
+	   glUniform1i(r_tex_loc, 2);
    }
 
-   int m_tex_loc = glGetUniformLocation(shader_program, "m_texture");
+   int m_tex_loc = glGetUniformLocation(shader_program1, "m_texture");
    if (m_tex_loc != -1)
    {
-	   glUniform1i(m_tex_loc, 3); // we bound our texture to texture unit 0
+	   glUniform1i(m_tex_loc, 3);
    }
 
-   glBindVertexArray(house_mesh_data.mVao);
-   glDrawElements(GL_TRIANGLES, house_mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);
+   glBindVertexArray(house_mesh_data1.mVao);
+   glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
 
 }
 
 void draw_pass_2()
 {
    const int pass = 2;
-   int pass_loc = glGetUniformLocation(shader_program, "pass");
+   int pass_loc = glGetUniformLocation(shader_program2, "pass");
    if(pass_loc != -1)
    {
       glUniform1i(pass_loc, pass);
    }
 
-   glActiveTexture(GL_TEXTURE0);
-   glBindTexture(GL_TEXTURE_2D, fbo_texture);
-   int tex_loc = glGetUniformLocation(shader_program, "texture");
-   if (tex_loc != -1)
+   glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data2.mScaleFactor));
+   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
+
+   int PVM_loc = glGetUniformLocation(shader_program2, "PVM");
+   if (PVM_loc != -1)
    {
-	   glUniform1i(tex_loc, 0); // we bound our texture to texture unit 0
+	   glm::mat4 PVM = P * V*M;
+	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
    }
 
-   int edge_loc = glGetUniformLocation(shader_program, "edge_detect");
-   if (edge_loc != -1)
+   glActiveTexture(GL_TEXTURE4);
+   glBindTexture(GL_TEXTURE_2D, original_render_texture);
+
+   glActiveTexture(GL_TEXTURE5);
+   glBindTexture(GL_TEXTURE_2D, original_depth_texture);
+
+   int col_tex_loc = glGetUniformLocation(shader_program2, "color_texture");
+   if (col_tex_loc != -1)
    {
-	   glUniform1i(edge_loc, edge_detect);
+	   glUniform1i(col_tex_loc, 4);
    }
 
-   glBindVertexArray(quad_vao);
-   glDrawArrays(GL_TRIANGLES, 0, 6);
-   /*glBindVertexArray(house_mesh_data.mVao);
-   glDrawElements(GL_TRIANGLES, house_mesh_data.mNumIndices, GL_UNSIGNED_INT, 0);*/
+   int dep_tex_loc = glGetUniformLocation(shader_program2, "depth_texture");
+   if (dep_tex_loc != -1)
+   {
+	   glUniform1i(dep_tex_loc, 5);
+   }
+
+   /*glBindVertexArray(quad_vao);
+   glDrawArrays(GL_TRIANGLES, 0, 6);*/
+   glBindVertexArray(house_mesh_data2.mVao);
+   glDrawElements(GL_TRIANGLES, house_mesh_data2.mNumIndices, GL_UNSIGNED_INT, 0);
 
 }
 
@@ -191,16 +210,19 @@ void draw_pass_2()
 void display()
 {
 
-   glUseProgram(shader_program);
+   glUseProgram(shader_program1);
 
    //glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    //glDrawBuffer(GL_BACK); // Render to back buffer.
+
    glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
-   glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
+   //glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
+   GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 };
+   glDrawBuffers(2, draw_buffers);
 
    //Make the viewport match the FBO texture size.
    int tex_w, tex_h;
-   glBindTexture(GL_TEXTURE_2D, fbo_texture);
+   glBindTexture(GL_TEXTURE_2D, original_render_texture);
    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
    glViewport(0, 0, tex_w, tex_h);
@@ -208,6 +230,9 @@ void display()
    //Clear the FBO.
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Lab assignment: don't forget to also clear depth
    draw_pass_1();
+
+
+   glUseProgram(shader_program2);
          
    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    glDrawBuffer(GL_BACK); // Render to back buffer.
@@ -216,19 +241,18 @@ void display()
    const int h = glutGet(GLUT_WINDOW_HEIGHT);
    glViewport(0, 0, w, h); //Render to the full viewport
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
-
    draw_pass_2();
    
    draw_gui();
 
-   if (recording == true)
+   /*if (recording == true)
    {
 	   glFinish();
 
 	   glReadBuffer(GL_BACK);
 	   read_frame_to_encode(&rgb, &pixels, w, h);
 	   encode_frame(rgb);
-   }
+   }*/
 
    glutSwapBuffers();
 }
@@ -237,26 +261,33 @@ void idle()
 {
 	glutPostRedisplay();
 
-   const int time_ms = glutGet(GLUT_ELAPSED_TIME);
+   /*const int time_ms = glutGet(GLUT_ELAPSED_TIME);
    time_sec = 0.001f*time_ms;
-   int time_loc = glGetUniformLocation(shader_program, "time");
+   int time_loc = glGetUniformLocation(shader_program1, "time");
    if (time_loc != -1)
    {
 	   glUniform1f(time_loc, time_sec);
    }
 
-   int mouse_pos_loc = glGetUniformLocation(shader_program, "mouse_pos");
-   if (mouse_pos_loc != -1)
+   int mouse_pos_loc1 = glGetUniformLocation(shader_program1, "mouse_pos");
+   if (mouse_pos_loc1 != -1)
    {
-	   glUniform2f(mouse_pos_loc, cur_mouse_pos.x, cur_mouse_pos.y);
+	   glUniform2f(mouse_pos_loc1, cur_mouse_pos.x, cur_mouse_pos.y);
    }
+
+   int mouse_pos_loc2 = glGetUniformLocation(shader_program2, "mouse_pos");
+   if (mouse_pos_loc2 != -1)
+   {
+	   glUniform2f(mouse_pos_loc2, cur_mouse_pos.x, cur_mouse_pos.y);
+   }*/
 }
 
 void reload_shader()
 {
-   GLuint new_shader = InitShader(vertex_shader.c_str(), geometry_shader.c_str(), fragment_shader.c_str());
+   GLuint new_shader1 = InitShader(vertex_shader1.c_str(), fragment_shader1.c_str());
+   GLuint new_shader2 = InitShader(vertex_shader2.c_str(), geometry_shader2.c_str(), fragment_shader2.c_str());
 
-   if(new_shader == -1) // loading failed
+   if(new_shader1 == -1 || new_shader2 == -1) // loading failed
    {
       glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
    }
@@ -264,16 +295,31 @@ void reload_shader()
    {
       glClearColor(1.0f, 0.98f, 0.8f, 0.0f);
 
-      if(shader_program != -1)
+      if(shader_program1 != -1)
       {
-         glDeleteProgram(shader_program);
+         glDeleteProgram(shader_program1);
       }
-      shader_program = new_shader;
+      shader_program1 = new_shader1;
 
-      if(house_mesh_data.mVao != -1)
+	  if (shader_program2 != -1)
+	  {
+		  glDeleteProgram(shader_program2);
+	  }
+	  shader_program2 = new_shader2;
+
+      /*if(house_mesh_data1.mVao != -1)
       {
-         BufferIndexedVerts(house_mesh_data);
+         //BufferIndexedVerts(house_mesh_data1);
+		  glUseProgram(shader_program1);
+		  house_mesh_data1 = LoadMesh(house_mesh_name);
       }
+
+	  if (house_mesh_data2.mVao != -1)
+	  {
+		  //BufferIndexedVerts(house_mesh_data2);
+		  glUseProgram(shader_program2);
+		  house_mesh_data2 = LoadMesh(house_mesh_name);
+	  }*/
    }
 }
 
@@ -350,11 +396,16 @@ void initOpenGl()
    reload_shader();
 
    //mesh and texture for pass 1
-   house_mesh_data = LoadMesh(house_mesh_name);
+   glUseProgram(shader_program1);
+   house_mesh_data1 = LoadMesh(house_mesh_name);
    house_d_texture_id = LoadTexture(house_d_texture_name.c_str());
    house_n_texture_id = LoadTexture(house_n_texture_name.c_str());
    house_r_texture_id = LoadTexture(house_r_texture_name.c_str());
    house_m_texture_id = LoadTexture(house_m_texture_name.c_str());
+
+
+   glUseProgram(shader_program2);
+   house_mesh_data2 = LoadMesh(house_mesh_name);
 
    //mesh for pass 2 (full screen quadrilateral)
    glGenVertexArrays(1, &quad_vao);
@@ -367,7 +418,7 @@ void initOpenGl()
    glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-   int pos_loc = glGetAttribLocation(shader_program, "pos_attrib");
+   int pos_loc = glGetAttribLocation(shader_program2, "pos_attrib");
    if(pos_loc >= 0)
    {
       glEnableVertexAttribArray(pos_loc);
@@ -378,14 +429,23 @@ void initOpenGl()
    const int h = glutGet(GLUT_WINDOW_HEIGHT);
    //Create texture to render pass 1 into.
    //Lab assignment: make the texture width and height be the window width and height.
-   glGenTextures(1, &fbo_texture);
-   glBindTexture(GL_TEXTURE_2D, fbo_texture);
+   glGenTextures(1, &original_render_texture);
+   glBindTexture(GL_TEXTURE_2D, original_render_texture);
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-   glBindTexture(GL_TEXTURE_2D, 0);   
+   glBindTexture(GL_TEXTURE_2D, 0);
+
+   glGenTextures(1, &original_depth_texture);
+   glBindTexture(GL_TEXTURE_2D, original_depth_texture);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glBindTexture(GL_TEXTURE_2D, 0);
 
    //Lab assignment: Create renderbuffer for depth.
    GLuint depth_buffer_id;
@@ -396,7 +456,8 @@ void initOpenGl()
    //Create the framebuffer object
    glGenFramebuffers(1, &fbo_id);
    glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
-   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, original_render_texture, 0);
+   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, original_depth_texture, 0);
 
    //Lab assignment: attach depth renderbuffer to FBO
    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer_id);

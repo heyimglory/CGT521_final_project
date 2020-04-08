@@ -138,11 +138,6 @@
     <ClCompile Include="VideoMux.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="fragment_shader.glsl" />
-    <None Include="geometry_shader.glsl" />
-    <None Include="vertex_shader.glsl" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="imconfig.h" />
     <ClInclude Include="imgui.h" />
     <ClInclude Include="imgui_impl_glut.h" />
@@ -155,6 +150,13 @@
     <ClInclude Include="LoadTexture.h" />
     <ClInclude Include="Surf.h" />
     <ClInclude Include="VideoMux.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fragment_shader1.glsl" />
+    <None Include="fragment_shader2.glsl" />
+    <None Include="geometry_shader2.glsl" />
+    <None Include="vertex_shader1.glsl" />
+    <None Include="vertex_shader2.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

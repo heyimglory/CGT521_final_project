@@ -44,17 +44,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex_shader.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="geometry_shader.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_shader.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="InitShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -91,5 +80,22 @@
     <ClInclude Include="Surf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fragment_shader1.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="fragment_shader2.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="geometry_shader2.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="vertex_shader1.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="vertex_shader2.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
