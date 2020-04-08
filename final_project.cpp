@@ -103,17 +103,9 @@ void draw_gui()
 
 void draw_pass_1()
 {
-   const int pass = 1;
-
    glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
    glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
    glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
-
-   int pass_loc = glGetUniformLocation(shader_program1, "pass");
-   if(pass_loc != -1)
-   {
-      glUniform1i(pass_loc, pass);
-   }
 
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, house_d_texture_id);
@@ -157,18 +149,12 @@ void draw_pass_1()
 
    glBindVertexArray(house_mesh_data1.mVao);
    glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
+   glBindVertexArray(0);
 
 }
 
 void draw_pass_2()
 {
-   const int pass = 2;
-   int pass_loc = glGetUniformLocation(shader_program2, "pass");
-   if(pass_loc != -1)
-   {
-      glUniform1i(pass_loc, pass);
-   }
-
    glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data2.mScaleFactor));
    glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
    glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
@@ -198,25 +184,19 @@ void draw_pass_2()
 	   glUniform1i(dep_tex_loc, 5);
    }
 
-   /*glBindVertexArray(quad_vao);
-   glDrawArrays(GL_TRIANGLES, 0, 6);*/
    glBindVertexArray(house_mesh_data2.mVao);
    glDrawElements(GL_TRIANGLES, house_mesh_data2.mNumIndices, GL_UNSIGNED_INT, 0);
-
+   glBindVertexArray(0);
 }
 
 // glut display callback function.
 // This function gets called every time the scene gets redisplayed 
 void display()
 {
-
+	// ===== pass 1 =====
    glUseProgram(shader_program1);
 
-   //glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
-   //glDrawBuffer(GL_BACK); // Render to back buffer.
-
    glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
-   //glDrawBuffer(GL_COLOR_ATTACHMENT0); //Out variable in frag shader will be written to the texture attached to GL_COLOR_ATTACHMENT0.
    GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 };
    glDrawBuffers(2, draw_buffers);
 
@@ -231,9 +211,7 @@ void display()
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Lab assignment: don't forget to also clear depth
    draw_pass_1();
 
-
-   glUseProgram(shader_program2);
-         
+   // ===== pass 2 =====
    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    glDrawBuffer(GL_BACK); // Render to back buffer.
 
@@ -241,7 +219,32 @@ void display()
    const int h = glutGet(GLUT_WINDOW_HEIGHT);
    glViewport(0, 0, w, h); //Render to the full viewport
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
+   // draw depth buffer
+   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+   /*glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
+   //M = glm::translate(M, glm::vec3(0.0f, 0.0f, 0.1f));
+   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
+   int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
+   if (PVM_loc != -1)
+   {
+	   glm::mat4 PVM = P * V*M;
+	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
+   }*/
+   glBindVertexArray(house_mesh_data1.mVao);
+   glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
+   glBindVertexArray(0);
+   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+   glUseProgram(shader_program2);
+   glDepthMask(GL_FALSE);
+   //glEnable(GL_POLYGON_OFFSET_FILL);
+   //glPolygonOffset(-2.0, -0.5);
+   glDisable(GL_CULL_FACE);
    draw_pass_2();
+   glEnable(GL_CULL_FACE);
+   //glDisable(GL_POLYGON_OFFSET_FILL);
+   glDepthMask(GL_TRUE);
    
    draw_gui();
 
