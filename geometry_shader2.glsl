@@ -2,8 +2,10 @@
 
 uniform sampler2D color_texture;
 uniform sampler2D depth_texture;
-float stroke_width = 0.01;
-float stroke_inter = 0.01;
+
+uniform bool draw_tri;
+uniform float stroke_width;
+uniform float stroke_inter;
 
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 140) out;
@@ -40,7 +42,7 @@ bool not_exceed(vec4 p, vec4 from, vec4 to)
 
 bool different_color(vec4 c1, vec4 c2)
 {
-	if(abs(c1.r - c2.r) > 0.02 && abs(c1.g - c2.g) > 0.02 && abs(c1.b - c2.b) > 0.02)
+	if(abs(c1.r - c2.r) > 0.05 && abs(c1.g - c2.g) > 0.05 && abs(c1.b - c2.b) > 0.05)
 		return true;
 	else
 		return false;
@@ -49,9 +51,9 @@ bool different_color(vec4 c1, vec4 c2)
 float is_ccw(vec4 HtoM, vec4 LtoM, vec4 n)
 {
 	if(cross(HtoM.xyz, LtoM.xyz).z < 0)
-		return -1.0;
-	else
 		return 1.0;
+	else
+		return -1.0;
 }
 
 void main(void)
@@ -62,25 +64,28 @@ void main(void)
 	int highest = 0;
 	int middle = 1;
 	int lowest = 2;
+	
+	if(draw_tri)
+	{
+		gl_Position = gl_in[0].gl_Position;
+		tex_coord = tex_coord_v[0];
+		depth = depth_v[0];
+		EmitVertex();
 
-	gl_Position = gl_in[0].gl_Position;
-	tex_coord = tex_coord_v[0];
-	depth = depth_v[0];
-	EmitVertex();
+		gl_Position = gl_in[1].gl_Position;
+		tex_coord = tex_coord_v[1];
+		depth = depth_v[1];
+		EmitVertex();
 
-	gl_Position = gl_in[1].gl_Position;
-	tex_coord = tex_coord_v[1];
-	depth = depth_v[1];
-	EmitVertex();
+		gl_Position = gl_in[2].gl_Position;
+		tex_coord = tex_coord_v[2];
+		depth = depth_v[2];
+		EmitVertex();
 
-	gl_Position = gl_in[2].gl_Position;
-	tex_coord = tex_coord_v[2];
-	depth = depth_v[2];
-	EmitVertex();
+		EndPrimitive();
+	}
 
-	EndPrimitive();
-
-	for(int i=0; i<3; i++)
+	/*for(int i=0; i<3; i++)
 	{
 		if(i == 0)
 		{
@@ -99,7 +104,7 @@ void main(void)
 			highest = 2;
 			middle = 0;
 			lowest = 1;
-		}
+		}*/
 
 		HtoL = normalize(gl_in[lowest].gl_Position - gl_in[highest].gl_Position);
 		HtoM = normalize(gl_in[middle].gl_Position - gl_in[highest].gl_Position);
@@ -196,5 +201,5 @@ void main(void)
 			}
 			line_end += to_next_end;
 		}
-	}
+	//}
 }  

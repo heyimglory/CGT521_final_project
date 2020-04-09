@@ -65,6 +65,10 @@ bool dragging = false;
 bool check_framebuffer_status();
 
 bool recording = false;
+bool show_coord = false;
+bool draw_tri = false;
+float stroke_width = 0.01;
+float stroke_inter = 0.01;
 
 void draw_gui()
 {
@@ -94,6 +98,12 @@ void draw_gui()
 		}
 	}
 
+	ImGui::SliderFloat("Stroke width", &stroke_width, 0.001, 0.05);
+	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.001, 0.05);
+	ImGui::Checkbox("Show coordinates", &show_coord);
+	ImGui::SameLine(500);
+	ImGui::Checkbox("Draw original triangles", &draw_tri);
+
 	ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
 	ImGui::SameLine(150);
 	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));
@@ -119,7 +129,7 @@ void draw_pass_1()
    int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
    if(PVM_loc != -1)
    {
-      glm::mat4 PVM = P*V*M;
+      glm::mat4 PVM = P * V * M;
       glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
    }
 
@@ -162,7 +172,7 @@ void draw_pass_2()
    int PVM_loc = glGetUniformLocation(shader_program2, "PVM");
    if (PVM_loc != -1)
    {
-	   glm::mat4 PVM = P * V*M;
+	   glm::mat4 PVM = P * V * M;
 	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
    }
 
@@ -182,6 +192,30 @@ void draw_pass_2()
    if (dep_tex_loc != -1)
    {
 	   glUniform1i(dep_tex_loc, 5);
+   }
+
+   int show_coord_loc = glGetUniformLocation(shader_program2, "show_coord");
+   if (show_coord_loc != -1)
+   {
+	   glUniform1i(show_coord_loc, show_coord);
+   }
+
+   int draw_tri_loc = glGetUniformLocation(shader_program2, "draw_tri");
+   if (draw_tri_loc != -1)
+   {
+	   glUniform1i(draw_tri_loc, draw_tri);
+   }
+
+   int stroke_width_loc = glGetUniformLocation(shader_program2, "stroke_width");
+   if (stroke_width_loc != -1)
+   {
+	   glUniform1f(stroke_width_loc, stroke_width);
+   }
+
+   int stroke_inter_loc = glGetUniformLocation(shader_program2, "stroke_inter");
+   if (stroke_inter_loc != -1)
+   {
+   glUniform1f(stroke_inter_loc, stroke_inter);
    }
 
    glBindVertexArray(house_mesh_data2.mVao);
@@ -221,16 +255,15 @@ void display()
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
    // draw depth buffer
    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-   /*glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
-   //M = glm::translate(M, glm::vec3(0.0f, 0.0f, 0.1f));
+   glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
    glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
+   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 99.0f);
    int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
    if (PVM_loc != -1)
    {
-	   glm::mat4 PVM = P * V*M;
+	   glm::mat4 PVM = P * V * M;
 	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
-   }*/
+   }
    glBindVertexArray(house_mesh_data1.mVao);
    glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
    glBindVertexArray(0);
@@ -366,9 +399,9 @@ void motion(int x, int y)
 void mouse(int button, int state, int x, int y)
 {
 	ImGui_ImplGlut_MouseButtonCallback(button, state);
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
 		dragging = true;
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
+	if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP)
 		dragging = false;
 	if (button == 3)
 	{
