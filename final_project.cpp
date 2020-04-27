@@ -47,11 +47,13 @@ static const std::string house_d_texture_name = "Alpine_chalet_textures/Diffuse_
 static const std::string house_n_texture_name = "Alpine_chalet_textures/Normal_map.png";
 static const std::string house_r_texture_name = "Alpine_chalet_textures/Roughness_map.png";
 static const std::string house_m_texture_name = "Alpine_chalet_textures/Metallic_map.png";
+static const std::string stroke_texture_name = "stroke_tex.png";
 
 GLuint house_d_texture_id = -1; //Texture map
 GLuint house_n_texture_id = -1;
 GLuint house_r_texture_id = -1;
 GLuint house_m_texture_id = -1;
+GLuint stroke_texture_id = -1;
 
 MeshData house_mesh_data1;
 MeshData house_mesh_data2;
@@ -68,8 +70,6 @@ bool dragging = false;
 bool check_framebuffer_status();
 
 bool recording = false;
-bool show_coord = false;
-bool draw_tri = false;
 float stroke_width = 0.01;
 float stroke_inter = 0.01;
 
@@ -103,10 +103,6 @@ void draw_gui()
 
 	ImGui::SliderFloat("Stroke width", &stroke_width, 0.001, 0.1);
 	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.001, 0.1);
-	ImGui::Checkbox("Show coordinates", &show_coord);
-	ImGui::SameLine(500);
-	ImGui::Checkbox("Draw original triangles", &draw_tri);
-
 	ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
 	ImGui::SameLine(150);
 	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));
@@ -180,9 +176,10 @@ void draw_pass_2()
 
    glActiveTexture(GL_TEXTURE4);
    glBindTexture(GL_TEXTURE_2D, original_render_texture);
-
    glActiveTexture(GL_TEXTURE5);
    glBindTexture(GL_TEXTURE_2D, original_depth_texture);
+   glActiveTexture(GL_TEXTURE6);
+   glBindTexture(GL_TEXTURE_2D, stroke_texture_id);
 
    int col_tex_loc = glGetUniformLocation(shader_program2, "color_texture");
    if (col_tex_loc != -1)
@@ -196,16 +193,10 @@ void draw_pass_2()
 	   glUniform1i(dep_tex_loc, 5);
    }
 
-   int show_coord_loc = glGetUniformLocation(shader_program2, "show_coord");
-   if (show_coord_loc != -1)
+   int stroke_tex_loc = glGetUniformLocation(shader_program2, "stroke_texture");
+   if (stroke_tex_loc != -1)
    {
-	   glUniform1i(show_coord_loc, show_coord);
-   }
-
-   int draw_tri_loc = glGetUniformLocation(shader_program2, "draw_tri");
-   if (draw_tri_loc != -1)
-   {
-	   glUniform1i(draw_tri_loc, draw_tri);
+	   glUniform1i(stroke_tex_loc, 6);
    }
 
    int stroke_width_loc = glGetUniformLocation(shader_program2, "stroke_width");
@@ -259,7 +250,10 @@ void display()
    glViewport(0, 0, w, h); //Render to the full viewport
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
    glDepthMask(GL_FALSE);
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    draw_pass_2();
+   glDisable(GL_BLEND);
    glDepthMask(GL_TRUE);
    
    draw_gui();
@@ -417,6 +411,7 @@ void initOpenGl()
    house_n_texture_id = LoadTexture(house_n_texture_name.c_str());
    house_r_texture_id = LoadTexture(house_r_texture_name.c_str());
    house_m_texture_id = LoadTexture(house_m_texture_name.c_str());
+   stroke_texture_id = LoadTexture(stroke_texture_name.c_str());;
 
 
    glUseProgram(shader_program2);

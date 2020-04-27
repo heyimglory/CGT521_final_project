@@ -3,8 +3,10 @@
 layout (triangles, equal_spacing, ccw) in;
 
 in vec2 tex_coord_tc[];
+in float depth_tc[];
 
 out vec2 tex_coord_te;
+out float depth_te;
 
 void main()
 {
@@ -18,4 +20,5 @@ void main()
 
 	gl_Position = u * p0 + v * p1 + w * p2;
 	tex_coord_te = u * tex_coord_tc[0] + v * tex_coord_tc[1] + w * tex_coord_tc[2];
+	depth_te = u * depth_tc[0] + v * depth_tc[1] + w * depth_tc[2];
 }

@@ -6,13 +6,16 @@ uniform float stroke_inter;
 layout (vertices = 3) out;  //number of output verts of the tess. control shader
 
 in vec2 tex_coord_v[];
+in float depth_v[];
 
 out vec2 tex_coord_tc[];
+out float depth_tc[];
 
 void main()
 {
 	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 	tex_coord_tc[gl_InvocationID] = tex_coord_v[gl_InvocationID];
+	depth_tc[gl_InvocationID] = depth_v[gl_InvocationID];
 
 	float tess_lv_0 = distance(gl_out[0].gl_Position, gl_out[1].gl_Position) / (stroke_width + stroke_inter);
 	float tess_lv_1 = distance(gl_out[0].gl_Position, gl_out[1].gl_Position) / (stroke_width + stroke_inter);

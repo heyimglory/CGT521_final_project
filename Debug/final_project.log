@@ -5,12 +5,12 @@ d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final
 d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(74): warning C4305: 'initializing': truncation from 'double' to 'float'
 d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(104): warning C4305: 'argument': truncation from 'double' to 'float'
 d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(105): warning C4305: 'argument': truncation from 'double' to 'float'
-d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(354): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(348): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(355): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
+d:\_purdue\spring_2020\cgt521_advanced_real-time_cg\template\final_project\final_project.cpp(349): warning C4244: '=': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
