@@ -17,7 +17,7 @@ in float depth_v[3];
 out vec2 tex_coord;
 out float depth;
 
-float depth_offset = 0.1;
+float depth_offset = 0.0;
 
 vec4 HtoL, HtoM, LtoM, n, p_HtoL;
 vec4 line_start, line_end, line_step, line_dir;
@@ -42,7 +42,7 @@ bool not_exceed(vec4 p, vec4 from, vec4 to)
 
 bool different_color(vec4 c1, vec4 c2)
 {
-	if(abs(c1.r - c2.r) > 0.05 && abs(c1.g - c2.g) > 0.05 && abs(c1.b - c2.b) > 0.05)
+	if(abs(c1.r - c2.r) > 1.5 && abs(c1.g - c2.g) > 1.5 && abs(c1.b - c2.b) > 1.5)
 		return true;
 	else
 		return false;
@@ -110,9 +110,9 @@ void main(void)
 		HtoM = normalize(gl_in[middle].gl_Position - gl_in[highest].gl_Position);
 		LtoM = normalize(gl_in[middle].gl_Position - gl_in[lowest].gl_Position);
 		n = vec4(cross(HtoM.xyz, HtoL.xyz), 0.0);
-		p_HtoL = vec4(cross(HtoL.xyz, n.xyz), 0.0);
-		to_next_start = HtoM * (stroke_width + stroke_inter);
-		to_next_end = LtoM * (stroke_width + stroke_inter) * distance(gl_in[lowest].gl_Position, gl_in[middle].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position);
+		p_HtoL = vec4(cross(HtoL.xyz, n.xyz).xy, 0.0, 0.0);
+		to_next_start = HtoM * stroke_inter;
+		to_next_end = LtoM * stroke_inter * distance(gl_in[lowest].gl_Position, gl_in[middle].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position);
 
 		line_end = gl_in[lowest].gl_Position;
 		for(line_start = gl_in[highest].gl_Position; not_exceed(line_start, gl_in[highest].gl_Position, gl_in[middle].gl_Position); line_start += to_next_start)
@@ -137,24 +137,24 @@ void main(void)
 					{
 						stroke_end = line_step - line_dir * stroke_width;
 
-						gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+						gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
 						depth = stroke_start_d - depth_offset;
 						EmitVertex();
 
-						gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+						gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
 						depth = stroke_start_d - depth_offset;
 						EmitVertex();
 
 						stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_start, line_end));
 
-						gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+						gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
 						depth = stroke_end_d - depth_offset;
 						EmitVertex();
 
-						gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+						gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
 						depth = stroke_end_d - depth_offset;
 						EmitVertex();
@@ -174,24 +174,24 @@ void main(void)
 				{
 					stroke_end = line_end;
 
-					gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
 					depth = stroke_start_d - depth_offset;
 					EmitVertex();
 
-					gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
 					depth = stroke_start_d - depth_offset;
 					EmitVertex();
 
 					stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_end, line_start));
 
-					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
 					depth = stroke_end_d - depth_offset;
 					EmitVertex();
 
-					gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
 					depth = stroke_end_d - depth_offset;
 					EmitVertex();

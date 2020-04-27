@@ -33,8 +33,8 @@ static const float PI = 3.1415926535f;
 GLuint shader_program1 = -1;
 GLuint shader_program2 = -1;
 
-GLuint quad_vao = -1;
-GLuint quad_vbo = -1;
+//GLuint quad_vao = -1;
+//GLuint quad_vbo = -1;
 
 GLuint fbo_id = -1;       // Framebuffer object,
 GLuint rbo_id = -1;       // and Renderbuffer (for depth buffering)
@@ -59,7 +59,9 @@ float time_sec = 0.0f;
 glm::vec2 cur_mouse_pos = glm::vec2(0.0f, 0.0f);
 glm::vec2 prev_mouse_pos = glm::vec2(0.0f, 0.0f);
 glm::vec2 cam_angle = glm::vec2(0.0f, 0.0f);
+glm::vec2 scene_offset = glm::vec2(0.0f, 0.0f);
 float cam_dist = 2.0f;
+bool turning = false;
 bool dragging = false;
 
 bool check_framebuffer_status();
@@ -114,7 +116,7 @@ void draw_gui()
 void draw_pass_1()
 {
    glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
-   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) + scene_offset.y, cam_dist * cos(cam_angle.y)), glm::vec3(scene_offset.x, scene_offset.y, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
    glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
 
    glActiveTexture(GL_TEXTURE0);
@@ -161,12 +163,34 @@ void draw_pass_1()
    glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
    glBindVertexArray(0);
 
+   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   glDrawBuffer(GL_BACK); // Render to back buffer.
+
+   const int w = glutGet(GLUT_WINDOW_WIDTH);
+   const int h = glutGet(GLUT_WINDOW_HEIGHT);
+   glViewport(0, 0, w, h); //Render to the full viewport
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
+   // draw depth buffer
+   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+   /*glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
+   glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) + scene_offset.y, cam_dist * cos(cam_angle.y)), glm::vec3(scene_offset.x, scene_offset.y, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
+   int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
+   if (PVM_loc != -1)
+   {
+	   glm::mat4 PVM = P * V * M;
+	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
+   }*/
+   glBindVertexArray(house_mesh_data1.mVao);
+   glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
+   glBindVertexArray(0);
+   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
 void draw_pass_2()
 {
    glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data2.mScaleFactor));
-   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) + scene_offset.y, cam_dist * cos(cam_angle.y)), glm::vec3(scene_offset.x, scene_offset.y, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
    glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
 
    int PVM_loc = glGetUniformLocation(shader_program2, "PVM");
@@ -246,7 +270,7 @@ void display()
    draw_pass_1();
 
    // ===== pass 2 =====
-   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   /*glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    glDrawBuffer(GL_BACK); // Render to back buffer.
 
    const int w = glutGet(GLUT_WINDOW_WIDTH);
@@ -256,8 +280,8 @@ void display()
    // draw depth buffer
    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
    glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
-   glm::mat4 V = glm::lookAt(glm::vec3(0.0f, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 99.0f);
+   glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) + scene_offset.y, cam_dist * cos(cam_angle.y)), glm::vec3(scene_offset.x, scene_offset.y, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
    int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
    if (PVM_loc != -1)
    {
@@ -265,17 +289,15 @@ void display()
 	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
    }
    glBindVertexArray(house_mesh_data1.mVao);
-   glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
+   //glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
    glBindVertexArray(0);
-   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);*/
 
    glUseProgram(shader_program2);
    glDepthMask(GL_FALSE);
    //glEnable(GL_POLYGON_OFFSET_FILL);
    //glPolygonOffset(-2.0, -0.5);
-   glDisable(GL_CULL_FACE);
    draw_pass_2();
-   glEnable(GL_CULL_FACE);
    //glDisable(GL_POLYGON_OFFSET_FILL);
    glDepthMask(GL_TRUE);
    
@@ -382,7 +404,7 @@ void motion(int x, int y)
 	prev_mouse_pos = cur_mouse_pos;
 	cur_mouse_pos.x = x;
 	cur_mouse_pos.y = y;
-	if (dragging)
+	if (turning)
 	{
 		cam_angle += 0.02f * (cur_mouse_pos - prev_mouse_pos);
 		if (cam_angle.x > 2.0 * PI)
@@ -394,15 +416,19 @@ void motion(int x, int y)
 		else if (cam_angle.y < -0.4999f * PI)
 			cam_angle.y = -0.4999f * PI;
 	}
+	if (dragging)
+	{
+		scene_offset += 0.002f * glm::vec2(prev_mouse_pos.x - cur_mouse_pos.x, cur_mouse_pos.y - prev_mouse_pos.y);
+	}
 }
 
 void mouse(int button, int state, int x, int y)
 {
 	ImGui_ImplGlut_MouseButtonCallback(button, state);
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
-		dragging = true;
+		turning = true;
 	if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP)
-		dragging = false;
+		turning = false;
 	if (button == 3)
 	{
 		if (cam_dist > 0.7f)
@@ -413,6 +439,10 @@ void mouse(int button, int state, int x, int y)
 		if (cam_dist < 3.0f)
 			cam_dist += 0.1f;
 	}
+	if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
+		dragging = true;
+	if (button == GLUT_MIDDLE_BUTTON && state == GLUT_UP)
+		dragging = false;
 }
 
 void printGlInfo()
@@ -444,7 +474,7 @@ void initOpenGl()
    house_mesh_data2 = LoadMesh(house_mesh_name);
 
    //mesh for pass 2 (full screen quadrilateral)
-   glGenVertexArrays(1, &quad_vao);
+   /*glGenVertexArrays(1, &quad_vao);
    glBindVertexArray(quad_vao);
 
    float vertices[] = {1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f};
@@ -459,7 +489,7 @@ void initOpenGl()
    {
       glEnableVertexAttribArray(pos_loc);
 	   glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, 0, 0);
-   }
+   }*/
   
    const int w = glutGet(GLUT_WINDOW_WIDTH);
    const int h = glutGet(GLUT_WINDOW_HEIGHT);
