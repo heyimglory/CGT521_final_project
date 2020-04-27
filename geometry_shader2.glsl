@@ -67,6 +67,12 @@ void main(void)
 	int middle = 1;
 	int lowest = 2;
 
+	if(distance(gl_in[highest].gl_Position, gl_in[middle].gl_Position) > distance(gl_in[highest].gl_Position, gl_in[lowest].gl_Position))
+	{
+		middle = 2;
+		lowest = 1;
+	}
+
 	HtoL = normalize(gl_in[lowest].gl_Position - gl_in[highest].gl_Position);
 	HtoM = normalize(gl_in[middle].gl_Position - gl_in[highest].gl_Position);
 	LtoM = normalize(gl_in[middle].gl_Position - gl_in[lowest].gl_Position);
@@ -94,7 +100,7 @@ void main(void)
 			step_tex_coord = mix(line_tex_coord[0], line_tex_coord[1], distance(line_step, line_start) / distance(line_start, line_end));
 			if(different_color(stroke_color, texture2D(color_texture, step_tex_coord)))
 			{
-				if(distance(line_step, stroke_start) > stroke_inter)
+				if(distance(line_step, stroke_start) > stroke_width)
 				{
 					stroke_end = line_step - line_dir * stroke_width;
 
