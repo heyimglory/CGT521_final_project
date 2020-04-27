@@ -155,6 +155,8 @@
     <None Include="fragment_shader1.glsl" />
     <None Include="fragment_shader2.glsl" />
     <None Include="geometry_shader2.glsl" />
+    <None Include="tesse_te_shader2.glsl" />
+    <None Include="tess_tc_shader2.glsl" />
     <None Include="vertex_shader1.glsl" />
     <None Include="vertex_shader2.glsl" />
   </ItemGroup>

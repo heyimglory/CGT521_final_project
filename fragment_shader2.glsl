@@ -11,16 +11,10 @@ in float depth;
       
 void main(void)
 {
-	/*if(depth - texture2D(depth_texture, tex_coord).r > 0.01)
-	{
-		discard;
-	}
-	else
-	{*/
-		fragcolor = texture2D(color_texture, tex_coord);
-		if(show_coord)
-			fragcolor = vec4(tex_coord, 0.0, 1.0);
-	//}
+	fragcolor = texture2D(color_texture, tex_coord);
+	if(show_coord)
+		fragcolor = vec4(tex_coord, 0.0, 0.7);
+	//fragcolor = vec4(0.0, 1.0, 1.0, 1.0);
 }
 
 

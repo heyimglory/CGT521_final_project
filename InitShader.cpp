@@ -252,3 +252,74 @@ GLuint InitShader(const char* vShaderFile, const char* gShaderFile, const char* 
 
    return program;
 }
+
+GLuint InitShader(const char* vShaderFile, const char* tcShader, const char* teShader, const char* gShaderFile, const char* fShaderFile)
+{
+	bool error = false;
+	struct Shader
+	{
+		const char*  filename;
+		GLenum       type;
+		GLchar*      source;
+	}  shaders[5] =
+	{
+	   { vShaderFile, GL_VERTEX_SHADER, NULL },
+	   { tcShader, GL_TESS_CONTROL_SHADER, NULL },
+	   { teShader, GL_TESS_EVALUATION_SHADER, NULL },
+	   { gShaderFile, GL_GEOMETRY_SHADER, NULL },
+	   { fShaderFile, GL_FRAGMENT_SHADER, NULL }
+	};
+
+	GLuint program = glCreateProgram();
+
+	for (int i = 0; i < 5; ++i)
+	{
+		Shader& s = shaders[i];
+		s.source = readShaderSource(s.filename);
+		if (shaders[i].source == NULL)
+		{
+			std::cerr << "Failed to read " << s.filename << std::endl;
+			error = true;
+		}
+
+		GLuint shader = glCreateShader(s.type);
+		glShaderSource(shader, 1, (const GLchar**)&s.source, NULL);
+		glCompileShader(shader);
+
+		GLint  compiled;
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+		if (!compiled)
+		{
+			std::cerr << s.filename << " failed to compile:" << std::endl;
+			printShaderCompileError(shader);
+			error = true;
+		}
+
+		delete[] s.source;
+
+		glAttachShader(program, shader);
+	}
+
+	/* link  and error check */
+	glLinkProgram(program);
+
+	GLint  linked;
+	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	if (!linked)
+	{
+		std::cerr << "Shader program failed to link" << std::endl;
+		printProgramLinkError(program);
+
+		error = true;
+	}
+
+	if (error == true)
+	{
+		return -1;
+	}
+
+	/* use program object */
+	glUseProgram(program);
+
+	return program;
+}

@@ -10,14 +10,13 @@ uniform float stroke_inter;
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 140) out;
 
-in vec3 p_model[3];
-in vec2 tex_coord_v[3];
-in float depth_v[3];
+in vec2 tex_coord_te[3];
+//in float depth_v[3];
 
 out vec2 tex_coord;
-out float depth;
+//out float depth;
 
-float depth_offset = 0.0;
+float depth_offset = 0.01;
 
 vec4 HtoL, HtoM, LtoM, n, p_HtoL;
 vec4 line_start, line_end, line_step, line_dir;
@@ -42,7 +41,7 @@ bool not_exceed(vec4 p, vec4 from, vec4 to)
 
 bool different_color(vec4 c1, vec4 c2)
 {
-	if(abs(c1.r - c2.r) > 1.5 && abs(c1.g - c2.g) > 1.5 && abs(c1.b - c2.b) > 1.5)
+	if(abs(c1.r - c2.r) > 0.05 && abs(c1.g - c2.g) > 0.05 && abs(c1.b - c2.b) > 0.05)
 		return true;
 	else
 		return false;
@@ -60,6 +59,10 @@ void main(void)
 {
 	/*if(depth_v[0] - texture2D(depth_texture, tex_coord_v[0]).r > depth_offset && depth_v[1] - texture2D(depth_texture, tex_coord_v[1]).r > depth_offset && depth_v[2] - texture2D(depth_texture, tex_coord_v[2]).r > depth_offset)
 		return;*/
+	if(gl_in[0].gl_Position.z / gl_in[0].gl_Position.w > texture2D(depth_texture, tex_coord_te[0]).r + depth_offset 
+	|| gl_in[1].gl_Position.z / gl_in[1].gl_Position.w > texture2D(depth_texture, tex_coord_te[1]).r + depth_offset 
+	|| gl_in[2].gl_Position.z / gl_in[2].gl_Position.w > texture2D(depth_texture, tex_coord_te[2]).r + depth_offset)
+		return;
 
 	int highest = 0;
 	int middle = 1;
@@ -68,18 +71,18 @@ void main(void)
 	if(draw_tri)
 	{
 		gl_Position = gl_in[0].gl_Position;
-		tex_coord = tex_coord_v[0];
-		depth = depth_v[0];
+		tex_coord = tex_coord_te[0];
+		//depth = depth_v[0];
 		EmitVertex();
 
 		gl_Position = gl_in[1].gl_Position;
-		tex_coord = tex_coord_v[1];
-		depth = depth_v[1];
+		tex_coord = tex_coord_te[1];
+		//depth = depth_v[1];
 		EmitVertex();
 
 		gl_Position = gl_in[2].gl_Position;
-		tex_coord = tex_coord_v[2];
-		depth = depth_v[2];
+		tex_coord = tex_coord_te[2];
+		//depth = depth_v[2];
 		EmitVertex();
 
 		EndPrimitive();
@@ -118,10 +121,10 @@ void main(void)
 		for(line_start = gl_in[highest].gl_Position; not_exceed(line_start, gl_in[highest].gl_Position, gl_in[middle].gl_Position); line_start += to_next_start)
 		{
 			line_dir = normalize(line_end - line_start);
-			line_tex_coord[0] = mix(tex_coord_v[highest], tex_coord_v[middle], distance(line_start, gl_in[highest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position));
-			line_tex_coord[1] = mix(tex_coord_v[lowest], tex_coord_v[middle], distance(line_start, gl_in[lowest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[lowest].gl_Position));
-			line_d[0] = mix(depth_v[highest], depth_v[middle], distance(line_start, gl_in[highest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position));
-			line_d[1] = mix(depth_v[lowest], depth_v[middle], distance(line_start, gl_in[lowest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[lowest].gl_Position));
+			line_tex_coord[0] = mix(tex_coord_te[highest], tex_coord_te[middle], distance(line_start, gl_in[highest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position));
+			line_tex_coord[1] = mix(tex_coord_te[lowest], tex_coord_te[middle], distance(line_start, gl_in[lowest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[lowest].gl_Position));
+			//line_d[0] = mix(depth_v[highest], depth_v[middle], distance(line_start, gl_in[highest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position));
+			//line_d[1] = mix(depth_v[lowest], depth_v[middle], distance(line_start, gl_in[lowest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[lowest].gl_Position));
 
 			stroke_color = texture2D(color_texture, line_tex_coord[0]);
 			stroke_start = line_start;
@@ -139,24 +142,24 @@ void main(void)
 
 						gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
-						depth = stroke_start_d - depth_offset;
+						//depth = stroke_start_d - depth_offset;
 						EmitVertex();
 
 						gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
-						depth = stroke_start_d - depth_offset;
+						//depth = stroke_start_d - depth_offset;
 						EmitVertex();
 
 						stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_start, line_end));
 
 						gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
-						depth = stroke_end_d - depth_offset;
+						//depth = stroke_end_d - depth_offset;
 						EmitVertex();
 
 						gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 						tex_coord = stroke_tex_coord;
-						depth = stroke_end_d - depth_offset;
+						//depth = stroke_end_d - depth_offset;
 						EmitVertex();
 
 						EndPrimitive();
@@ -176,24 +179,24 @@ void main(void)
 
 					gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
-					depth = stroke_start_d - depth_offset;
+					//depth = stroke_start_d - depth_offset;
 					EmitVertex();
 
 					gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
-					depth = stroke_start_d - depth_offset;
+					//depth = stroke_start_d - depth_offset;
 					EmitVertex();
 
 					stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_end, line_start));
 
-					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
-					tex_coord = stroke_tex_coord;
-					depth = stroke_end_d - depth_offset;
-					EmitVertex();
-
 					gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
 					tex_coord = stroke_tex_coord;
-					depth = stroke_end_d - depth_offset;
+					//depth = stroke_end_d - depth_offset;
+					EmitVertex();
+
+					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+					tex_coord = stroke_tex_coord;
+					//depth = stroke_end_d - depth_offset;
 					EmitVertex();
 
 					EndPrimitive();

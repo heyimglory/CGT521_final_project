@@ -97,5 +97,11 @@
     <None Include="vertex_shader2.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="tess_tc_shader2.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="tesse_te_shader2.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

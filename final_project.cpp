@@ -21,10 +21,14 @@
 #include "VideoMux.h"
 #include "imgui_impl_glut.h"
 
+#define BUFFER_OFFSET(i)    ((char*)NULL + (i))
+
 static const std::string vertex_shader1("vertex_shader1.glsl");
 static const std::string fragment_shader1("fragment_shader1.glsl");
 
 static const std::string vertex_shader2("vertex_shader2.glsl");
+static const std::string tess_control_shader2("tess_tc_shader2.glsl");
+static const std::string tess_eval_shader2("tesse_te_shader2.glsl");
 static const std::string geometry_shader2("geometry_shader2.glsl");
 static const std::string fragment_shader2("fragment_shader2.glsl");
 
@@ -32,9 +36,6 @@ static const float PI = 3.1415926535f;
 
 GLuint shader_program1 = -1;
 GLuint shader_program2 = -1;
-
-//GLuint quad_vao = -1;
-//GLuint quad_vbo = -1;
 
 GLuint fbo_id = -1;       // Framebuffer object,
 GLuint rbo_id = -1;       // and Renderbuffer (for depth buffering)
@@ -100,8 +101,8 @@ void draw_gui()
 		}
 	}
 
-	ImGui::SliderFloat("Stroke width", &stroke_width, 0.001, 0.05);
-	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.001, 0.05);
+	ImGui::SliderFloat("Stroke width", &stroke_width, 0.001, 0.1);
+	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.001, 0.1);
 	ImGui::Checkbox("Show coordinates", &show_coord);
 	ImGui::SameLine(500);
 	ImGui::Checkbox("Draw original triangles", &draw_tri);
@@ -162,29 +163,6 @@ void draw_pass_1()
    glBindVertexArray(house_mesh_data1.mVao);
    glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
    glBindVertexArray(0);
-
-   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
-   glDrawBuffer(GL_BACK); // Render to back buffer.
-
-   const int w = glutGet(GLUT_WINDOW_WIDTH);
-   const int h = glutGet(GLUT_WINDOW_HEIGHT);
-   glViewport(0, 0, w, h); //Render to the full viewport
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
-   // draw depth buffer
-   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-   /*glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
-   glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) + scene_offset.y, cam_dist * cos(cam_angle.y)), glm::vec3(scene_offset.x, scene_offset.y, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
-   int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
-   if (PVM_loc != -1)
-   {
-	   glm::mat4 PVM = P * V * M;
-	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
-   }*/
-   glBindVertexArray(house_mesh_data1.mVao);
-   glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
-   glBindVertexArray(0);
-   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
 void draw_pass_2()
@@ -243,8 +221,9 @@ void draw_pass_2()
    }
 
    glBindVertexArray(house_mesh_data2.mVao);
-   glDrawElements(GL_TRIANGLES, house_mesh_data2.mNumIndices, GL_UNSIGNED_INT, 0);
-   glBindVertexArray(0);
+   glPatchParameteri(GL_PATCH_VERTICES, 3); //number of input verts to the tess. control shader per patch.
+   glDrawElements(GL_PATCHES, house_mesh_data2.mNumIndices, GL_UNSIGNED_INT, 0);
+   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 // glut display callback function.
@@ -270,47 +249,29 @@ void display()
    draw_pass_1();
 
    // ===== pass 2 =====
-   /*glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+   glUseProgram(shader_program2);
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
    glDrawBuffer(GL_BACK); // Render to back buffer.
 
    const int w = glutGet(GLUT_WINDOW_WIDTH);
    const int h = glutGet(GLUT_WINDOW_HEIGHT);
    glViewport(0, 0, w, h); //Render to the full viewport
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
-   // draw depth buffer
-   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-   glm::mat4 M = glm::rotate(cam_angle.x * 180.0f / PI, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data1.mScaleFactor));
-   glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) + scene_offset.y, cam_dist * cos(cam_angle.y)), glm::vec3(scene_offset.x, scene_offset.y, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-   glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
-   int PVM_loc = glGetUniformLocation(shader_program1, "PVM");
-   if (PVM_loc != -1)
-   {
-	   glm::mat4 PVM = P * V * M;
-	   glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
-   }
-   glBindVertexArray(house_mesh_data1.mVao);
-   //glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
-   glBindVertexArray(0);
-   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);*/
-
-   glUseProgram(shader_program2);
    glDepthMask(GL_FALSE);
-   //glEnable(GL_POLYGON_OFFSET_FILL);
-   //glPolygonOffset(-2.0, -0.5);
    draw_pass_2();
-   //glDisable(GL_POLYGON_OFFSET_FILL);
    glDepthMask(GL_TRUE);
    
    draw_gui();
 
-   /*if (recording == true)
+   if (recording == true)
    {
 	   glFinish();
 
 	   glReadBuffer(GL_BACK);
 	   read_frame_to_encode(&rgb, &pixels, w, h);
 	   encode_frame(rgb);
-   }*/
+   }
 
    glutSwapBuffers();
 }
@@ -320,30 +281,18 @@ void idle()
 	glutPostRedisplay();
 
    /*const int time_ms = glutGet(GLUT_ELAPSED_TIME);
-   time_sec = 0.001f*time_ms;
-   int time_loc = glGetUniformLocation(shader_program1, "time");
+   time_sec = 0.001f * time_ms;
+   int time_loc = glGetUniformLocation(shader_program2, "time");
    if (time_loc != -1)
    {
 	   glUniform1f(time_loc, time_sec);
-   }
-
-   int mouse_pos_loc1 = glGetUniformLocation(shader_program1, "mouse_pos");
-   if (mouse_pos_loc1 != -1)
-   {
-	   glUniform2f(mouse_pos_loc1, cur_mouse_pos.x, cur_mouse_pos.y);
-   }
-
-   int mouse_pos_loc2 = glGetUniformLocation(shader_program2, "mouse_pos");
-   if (mouse_pos_loc2 != -1)
-   {
-	   glUniform2f(mouse_pos_loc2, cur_mouse_pos.x, cur_mouse_pos.y);
    }*/
 }
 
 void reload_shader()
 {
    GLuint new_shader1 = InitShader(vertex_shader1.c_str(), fragment_shader1.c_str());
-   GLuint new_shader2 = InitShader(vertex_shader2.c_str(), geometry_shader2.c_str(), fragment_shader2.c_str());
+   GLuint new_shader2 = InitShader(vertex_shader2.c_str(), tess_control_shader2.c_str(), tess_eval_shader2.c_str(), geometry_shader2.c_str(), fragment_shader2.c_str());
 
    if(new_shader1 == -1 || new_shader2 == -1) // loading failed
    {
@@ -472,24 +421,6 @@ void initOpenGl()
 
    glUseProgram(shader_program2);
    house_mesh_data2 = LoadMesh(house_mesh_name);
-
-   //mesh for pass 2 (full screen quadrilateral)
-   /*glGenVertexArrays(1, &quad_vao);
-   glBindVertexArray(quad_vao);
-
-   float vertices[] = {1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f};
-
-   //create vertex buffers for vertex coords
-   glGenBuffers(1, &quad_vbo);
-   glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-   int pos_loc = glGetAttribLocation(shader_program2, "pos_attrib");
-   if(pos_loc >= 0)
-   {
-      glEnableVertexAttribArray(pos_loc);
-	   glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, 0, 0);
-   }*/
   
    const int w = glutGet(GLUT_WINDOW_WIDTH);
    const int h = glutGet(GLUT_WINDOW_HEIGHT);
@@ -531,7 +462,6 @@ void initOpenGl()
    check_framebuffer_status();
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 }
 
 int main (int argc, char **argv)
