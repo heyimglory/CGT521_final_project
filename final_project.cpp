@@ -33,6 +33,7 @@ static const std::string geometry_shader2("geometry_shader2.glsl");
 static const std::string fragment_shader2("fragment_shader2.glsl");
 
 static const float PI = 3.1415926535f;
+static glm::vec2 window_size = glm::vec2(1920, 1080);
 
 GLuint shader_program1 = -1;
 GLuint shader_program2 = -1;
@@ -48,12 +49,17 @@ static const std::string house_n_texture_name = "Alpine_chalet_textures/Normal_m
 static const std::string house_r_texture_name = "Alpine_chalet_textures/Roughness_map.png";
 static const std::string house_m_texture_name = "Alpine_chalet_textures/Metallic_map.png";
 static const std::string stroke_texture_name = "stroke_tex.png";
+static const std::string bg_texture_name = "background.png";
 
 GLuint house_d_texture_id = -1; //Texture map
 GLuint house_n_texture_id = -1;
 GLuint house_r_texture_id = -1;
 GLuint house_m_texture_id = -1;
 GLuint stroke_texture_id = -1;
+GLuint bg_texture_id = -1;
+
+GLuint quad_vao = -1;
+GLuint quad_vbo = -1;
 
 MeshData house_mesh_data1;
 MeshData house_mesh_data2;
@@ -104,18 +110,63 @@ void draw_gui()
 
 	ImGui::SliderFloat("Stroke width", &stroke_width, 0.02, 0.1);
 	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.01, 0.1);
-	/*ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
+	ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
 	ImGui::SameLine(150);
-	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));*/
-	ImGui::Image((void*)original_render_texture, ImVec2(306, 228));
-	ImGui::SameLine(450);
-	ImGui::Image((void*)original_depth_texture, ImVec2(306, 228));
+	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));
 
 	ImGui::Render();
 }
 
-void draw_pass_1()
+void draw_scene()
 {
+	// draw background
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
+	glDrawBuffer(GL_BACK); // Render to back buffer.
+
+	const int w = glutGet(GLUT_WINDOW_WIDTH);
+	const int h = glutGet(GLUT_WINDOW_HEIGHT);
+	glViewport(0, 0, w, h); //Render to the full viewport
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
+
+	int pass_loc = glGetUniformLocation(shader_program1, "pass");
+	if (pass_loc != -1)
+	{
+		glUniform1i(pass_loc, 1);
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bg_texture_id);
+	int bg_tex_loc = glGetUniformLocation(shader_program1, "bg_texture");
+	if (bg_tex_loc != -1)
+	{
+		glUniform1i(bg_tex_loc, 0);
+	}
+
+	glBindVertexArray(quad_vao);
+	glDepthMask(GL_FALSE);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDepthMask(GL_TRUE);
+
+	// draw the house
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
+	GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, draw_buffers);
+
+	//Make the viewport match the FBO texture size.
+	int tex_w, tex_h;
+	glBindTexture(GL_TEXTURE_2D, original_render_texture);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
+	glViewport(0, 0, tex_w, tex_h);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	pass_loc = glGetUniformLocation(shader_program1, "pass");
+	if (pass_loc != -1)
+	{
+		glUniform1i(pass_loc, 2);
+	}
+
 	glm::vec4 cam_up = glm::rotate(cam_angle.y * 180.0f / PI, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(0.0f, scene_offset.y, 0.0f, 0.0f);
 	cam_pos = glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y));
 	glm::mat4 M = glm::translate(glm::vec3(0.0, -cam_up.y, cam_up.z)) * glm::rotate(cam_angle.x * 180.0f / PI,
@@ -148,7 +199,7 @@ void draw_pass_1()
 	int d_tex_loc = glGetUniformLocation(shader_program1, "d_texture");
 	if(d_tex_loc != -1)
 	{
-		glUniform1i(d_tex_loc, 0); // we bound our texture to texture unit 0
+		glUniform1i(d_tex_loc, 0);
 	}
 
 	int n_tex_loc = glGetUniformLocation(shader_program1, "n_texture");
@@ -180,7 +231,7 @@ void draw_pass_1()
 	glBindVertexArray(0);
 }
 
-void draw_pass_2()
+void draw_strokes()
 {
 	glm::vec4 cam_up = glm::rotate(cam_angle.y * 180.0f / PI, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(0.0f, scene_offset.y, 0.0f, 0.0f);
 	cam_pos = glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y));
@@ -196,29 +247,37 @@ void draw_pass_2()
 		glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
 	}
 
-	glActiveTexture(GL_TEXTURE4);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, original_render_texture);
-	glActiveTexture(GL_TEXTURE5);
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, original_depth_texture);
-	glActiveTexture(GL_TEXTURE6);
+	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, stroke_texture_id);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, bg_texture_id);
 
 	int col_tex_loc = glGetUniformLocation(shader_program2, "color_texture");
 	if (col_tex_loc != -1)
 	{
-		glUniform1i(col_tex_loc, 4);
+		glUniform1i(col_tex_loc, 0);
 	}
 
 	int dep_tex_loc = glGetUniformLocation(shader_program2, "depth_texture");
 	if (dep_tex_loc != -1)
 	{
-		glUniform1i(dep_tex_loc, 5);
+		glUniform1i(dep_tex_loc, 1);
 	}
 
 	int stroke_tex_loc = glGetUniformLocation(shader_program2, "stroke_texture");
 	if (stroke_tex_loc != -1)
 	{
-		glUniform1i(stroke_tex_loc, 6);
+		glUniform1i(stroke_tex_loc, 2);
+	}
+
+	int bg_tex_loc = glGetUniformLocation(shader_program2, "bg_texture");
+	if (bg_tex_loc != -1)
+	{
+		glUniform1i(bg_tex_loc, 3);
 	}
 
 	int stroke_width_loc = glGetUniformLocation(shader_program2, "stroke_width");
@@ -233,6 +292,12 @@ void draw_pass_2()
 	glUniform1f(stroke_inter_loc, stroke_inter);
 	}
 
+	int win_size_loc = glGetUniformLocation(shader_program2, "win_size");
+	if (win_size_loc != -1)
+	{
+		glUniform2fv(win_size_loc, 1, glm::value_ptr(window_size));
+	}
+
 	glBindVertexArray(house_mesh_data2.mVao);
 	glPatchParameteri(GL_PATCH_VERTICES, 3); //number of input verts to the tess. control shader per patch.
 	glDrawElements(GL_PATCHES, house_mesh_data2.mNumIndices, GL_UNSIGNED_INT, 0);
@@ -243,25 +308,25 @@ void draw_pass_2()
 // This function gets called every time the scene gets redisplayed 
 void display()
 {
-	// ===== pass 1 =====
+	// ===== draw the scene =====
 	glUseProgram(shader_program1);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
+	/*glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Render to FBO.
 	GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 };
-	glDrawBuffers(2, draw_buffers);
+	glDrawBuffers(2, draw_buffers);*/
 
 	//Make the viewport match the FBO texture size.
-	int tex_w, tex_h;
+	/*int tex_w, tex_h;
 	glBindTexture(GL_TEXTURE_2D, original_render_texture);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
-	glViewport(0, 0, tex_w, tex_h);
+	glViewport(0, 0, tex_w, tex_h);*/
 
 	//Clear the FBO.
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Lab assignment: don't forget to also clear depth
-	draw_pass_1();
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Lab assignment: don't forget to also clear depth
+	draw_scene();
 
-	// ===== pass 2 =====
+	// ===== add strokes =====
 	glUseProgram(shader_program2);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Do not render the next pass to FBO.
@@ -270,11 +335,12 @@ void display()
 	const int w = glutGet(GLUT_WINDOW_WIDTH);
 	const int h = glutGet(GLUT_WINDOW_HEIGHT);
 	glViewport(0, 0, w, h); //Render to the full viewport
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the back buffer
+
 	glDepthMask(GL_FALSE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	draw_pass_2();
+	draw_strokes();
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
    
@@ -433,7 +499,33 @@ void initOpenGl()
    house_n_texture_id = LoadTexture(house_n_texture_name.c_str());
    house_r_texture_id = LoadTexture(house_r_texture_name.c_str());
    house_m_texture_id = LoadTexture(house_m_texture_name.c_str());
-   stroke_texture_id = LoadTexture(stroke_texture_name.c_str());;
+   stroke_texture_id = LoadTexture(stroke_texture_name.c_str());
+   bg_texture_id = LoadTexture(bg_texture_name.c_str());
+
+   glGenVertexArrays(1, &quad_vao);
+   glBindVertexArray(quad_vao);
+
+   float quad_data[] = { 1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, // pos
+	   1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f }; // tex coord
+
+   //create vertex buffers for vertex coords
+   glGenBuffers(1, &quad_vbo);
+   glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(quad_data), quad_data, GL_STATIC_DRAW);
+
+   int pos_loc = glGetAttribLocation(shader_program1, "pos_attrib");
+   if (pos_loc >= 0)
+   {
+	   glEnableVertexAttribArray(pos_loc);
+	   glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, 0, 0);
+   }
+
+   int tex_coord_loc = glGetAttribLocation(shader_program1, "tex_coord_attrib");
+   if (tex_coord_loc >= 0)
+   {
+	   glEnableVertexAttribArray(tex_coord_loc);
+	   glVertexAttribPointer(tex_coord_loc, 2, GL_FLOAT, false, 0, (void*)(12 * sizeof(float)));
+   }
 
 
    glUseProgram(shader_program2);
@@ -487,7 +579,7 @@ int main (int argc, char **argv)
    glutInit(&argc, argv); 
    glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
    glutInitWindowPosition (5, 5);
-   glutInitWindowSize (1024, 768);
+   glutInitWindowSize(window_size.x, window_size.y);
    int win = glutCreateWindow ("Final Project");
 
    printGlInfo();
