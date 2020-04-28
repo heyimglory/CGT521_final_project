@@ -14,11 +14,13 @@ out float depth;
 
 void main(void)
 {
+	// pass through for rendering the background
 	if(pass == 1)
 	{
 		gl_Position = vec4(pos_attrib, 1.0);
 		tex_coord = tex_coord_attrib;
 	}
+	// render the scene into texture
 	else
 	{
 		vec4 pos = PVM * vec4(pos_attrib, 1.0);
