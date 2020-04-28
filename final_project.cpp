@@ -77,7 +77,7 @@ bool dragging = false;
 bool check_framebuffer_status();
 
 bool recording = false;
-float stroke_width = 0.07;
+float stroke_width = 0.05;
 float stroke_inter = 0.03;
 
 void draw_gui()
@@ -108,8 +108,8 @@ void draw_gui()
 		}
 	}
 
-	ImGui::SliderFloat("Stroke width", &stroke_width, 0.02, 0.1);
-	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.01, 0.1);
+	ImGui::SliderFloat("Stroke width", &stroke_width, 0.02, 0.07);
+	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.01, 0.08);
 	ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
 	ImGui::SameLine(150);
 	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));

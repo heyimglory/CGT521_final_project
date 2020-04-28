@@ -71,14 +71,6 @@ void main(void)
 		return;
 	}
 
-	// change dir if it's a thin triangle
-	if (distance(gl_in[highest].gl_Position, gl_in[middle].gl_Position) < stroke_width)
-	{
-		int temp = lowest;
-		lowest = middle;
-		middle = temp;
-	}
-
 	// determine the vectors
 	HtoL = normalize(gl_in[lowest].gl_Position - gl_in[highest].gl_Position);
 	HtoM = normalize(gl_in[middle].gl_Position - gl_in[highest].gl_Position);
@@ -94,8 +86,6 @@ void main(void)
 		line_dir = normalize(line_end - line_start);
 		line_tex_coord[0] = mix(tex_coord_te[highest], tex_coord_te[middle], distance(line_start, gl_in[highest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position));
 		line_tex_coord[1] = mix(tex_coord_te[lowest], tex_coord_te[middle], distance(line_start, gl_in[lowest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[lowest].gl_Position));
-		//line_d[0] = mix(depth_v[highest], depth_v[middle], distance(line_start, gl_in[highest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[highest].gl_Position));
-		//line_d[1] = mix(depth_v[lowest], depth_v[middle], distance(line_start, gl_in[lowest].gl_Position) / distance(gl_in[middle].gl_Position, gl_in[lowest].gl_Position));
 
 		stroke_color = texture2D(color_texture, line_tex_coord[0]);
 		stroke_start = line_start;
@@ -111,13 +101,13 @@ void main(void)
 				{
 					stroke_end = line_step - line_dir * stroke_width;
 
-					gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;
+					gl_Position = stroke_start - 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 					tex_coord = vec2(0.0, 0.0);
 					color = stroke_color;
 					//depth = stroke_start_d - depth_offset;
 					EmitVertex();
 
-					gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;
+					gl_Position = stroke_start + 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 					tex_coord = vec2(0.0, 1.0);
 					color = stroke_color;
 					//depth = stroke_start_d - depth_offset;
@@ -125,13 +115,13 @@ void main(void)
 
 					stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_start, line_end));
 
-					gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;
+					gl_Position = stroke_end - 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 					tex_coord = vec2(1.0, 0.0);
 					color = stroke_color;
 					//depth = stroke_end_d - depth_offset;
 					EmitVertex();
 
-					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;
+					gl_Position = stroke_end + 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 					tex_coord = vec2(1.0, 1.0);
 					color = stroke_color;
 					//depth = stroke_end_d - depth_offset;
@@ -152,13 +142,13 @@ void main(void)
 			{
 				stroke_end = line_end;
 
-				gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;
+				gl_Position = stroke_start - 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 				tex_coord = vec2(0.0, 0.0);
 				color = stroke_color;
 				//depth = stroke_start_d - depth_offset;
 				EmitVertex();
 
-				gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;
+				gl_Position = stroke_start + 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 				tex_coord = vec2(0.0, 1.0);
 				color = stroke_color;
 				//depth = stroke_start_d - depth_offset;
@@ -166,13 +156,13 @@ void main(void)
 
 				stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_end, line_start));
 
-				gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;
+				gl_Position = stroke_end - 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 				tex_coord = vec2(1.0, 0.0);
 				color = stroke_color;
 				//depth = stroke_end_d - depth_offset;
 				EmitVertex();
 
-				gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;
+				gl_Position = stroke_end + 0.5 * stroke_width * normalize(vec4(p_HtoL.x, p_HtoL.y, 0.0, 0.0));
 				tex_coord = vec2(1.0, 1.0);
 				color = stroke_color;
 				//depth = stroke_end_d - depth_offset;
