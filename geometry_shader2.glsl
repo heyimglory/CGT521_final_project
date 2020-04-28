@@ -16,7 +16,7 @@ out vec2 tex_coord;
 out vec4 color;
 //out float depth;
 
-float depth_offset = 0.006;
+float depth_offset = 0.003;
 
 vec4 HtoL, HtoM, LtoM, n, p_HtoL;
 vec4 line_start, line_end, line_step, line_dir;
@@ -47,32 +47,39 @@ bool different_color(vec4 c1, vec4 c2)
 		return false;
 }
 
-float is_ccw(vec4 HtoM, vec4 LtoM, vec4 n)
-{
-	if(cross(HtoM.xyz, LtoM.xyz).z < 0)
-		return 1.0;
-	else
-		return -1.0;
-}
-
 void main(void)
 {
-	/*if(depth_v[0] - texture2D(depth_texture, tex_coord_v[0]).r > depth_offset && depth_v[1] - texture2D(depth_texture, tex_coord_v[1]).r > depth_offset && depth_v[2] - texture2D(depth_texture, tex_coord_v[2]).r > depth_offset)
-		return;*/
-	if(depth_te[0] > texture2D(depth_texture, tex_coord_te[0]).r + depth_offset || depth_te[1] > texture2D(depth_texture, tex_coord_te[1]).r + depth_offset 
-	|| depth_te[2] > texture2D(depth_texture, tex_coord_te[2]).r + depth_offset)
+	// discard triangle if all the ponts are occluded
+	if(depth_te[0] > texture2D(depth_texture, tex_coord_te[0]).r + depth_offset && depth_te[1] > texture2D(depth_texture, tex_coord_te[1]).r + depth_offset 
+	&& depth_te[2] > texture2D(depth_texture, tex_coord_te[2]).r + depth_offset)
 		return;
 
 	int highest = 0;
 	int middle = 1;
 	int lowest = 2;
 
+	// make sure highest to lowest is not the shotest edge
 	if(distance(gl_in[highest].gl_Position, gl_in[middle].gl_Position) > distance(gl_in[highest].gl_Position, gl_in[lowest].gl_Position))
 	{
 		middle = 2;
 		lowest = 1;
 	}
 
+	// discard triangle if smaller than stroke width
+	if (distance(gl_in[highest].gl_Position, gl_in[lowest].gl_Position) < stroke_width)
+	{
+		return;
+	}
+
+	// change dir if it's a thin triangle
+	if (distance(gl_in[highest].gl_Position, gl_in[middle].gl_Position) < stroke_width)
+	{
+		int temp = lowest;
+		lowest = middle;
+		middle = temp;
+	}
+
+	// determine the vectors
 	HtoL = normalize(gl_in[lowest].gl_Position - gl_in[highest].gl_Position);
 	HtoM = normalize(gl_in[middle].gl_Position - gl_in[highest].gl_Position);
 	LtoM = normalize(gl_in[middle].gl_Position - gl_in[lowest].gl_Position);
@@ -104,13 +111,13 @@ void main(void)
 				{
 					stroke_end = line_step - line_dir * stroke_width;
 
-					gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;
 					tex_coord = vec2(0.0, 0.0);
 					color = stroke_color;
 					//depth = stroke_start_d - depth_offset;
 					EmitVertex();
 
-					gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;
 					tex_coord = vec2(0.0, 1.0);
 					color = stroke_color;
 					//depth = stroke_start_d - depth_offset;
@@ -118,13 +125,13 @@ void main(void)
 
 					stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_start, line_end));
 
-					gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;
 					tex_coord = vec2(1.0, 0.0);
 					color = stroke_color;
 					//depth = stroke_end_d - depth_offset;
 					EmitVertex();
 
-					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+					gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;
 					tex_coord = vec2(1.0, 1.0);
 					color = stroke_color;
 					//depth = stroke_end_d - depth_offset;
@@ -145,13 +152,13 @@ void main(void)
 			{
 				stroke_end = line_end;
 
-				gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+				gl_Position = stroke_start - 0.5 * stroke_width * p_HtoL;
 				tex_coord = vec2(0.0, 0.0);
 				color = stroke_color;
 				//depth = stroke_start_d - depth_offset;
 				EmitVertex();
 
-				gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+				gl_Position = stroke_start + 0.5 * stroke_width * p_HtoL;
 				tex_coord = vec2(0.0, 1.0);
 				color = stroke_color;
 				//depth = stroke_start_d - depth_offset;
@@ -159,13 +166,13 @@ void main(void)
 
 				stroke_end_d = mix(line_d[0], line_d[1], distance(stroke_end, line_start) / distance(line_end, line_start));
 
-				gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+				gl_Position = stroke_end - 0.5 * stroke_width * p_HtoL;
 				tex_coord = vec2(1.0, 0.0);
 				color = stroke_color;
 				//depth = stroke_end_d - depth_offset;
 				EmitVertex();
 
-				gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;// * is_ccw(HtoM, LtoM, n);
+				gl_Position = stroke_end + 0.5 * stroke_width * p_HtoL;
 				tex_coord = vec2(1.0, 1.0);
 				color = stroke_color;
 				//depth = stroke_end_d - depth_offset;

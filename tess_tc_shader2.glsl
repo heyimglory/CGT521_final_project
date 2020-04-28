@@ -19,7 +19,7 @@ void main()
 
 	float tess_lv_0 = distance(gl_out[0].gl_Position, gl_out[1].gl_Position) / (stroke_width + stroke_inter);
 	float tess_lv_1 = distance(gl_out[1].gl_Position, gl_out[2].gl_Position) / (stroke_width + stroke_inter);
-	float tess_lv_2 = distance(gl_out[1].gl_Position, gl_out[0].gl_Position) / (stroke_width + stroke_inter);
+	float tess_lv_2 = distance(gl_out[2].gl_Position, gl_out[0].gl_Position) / (stroke_width + stroke_inter);
 
 	//set tessellation levels
 	gl_TessLevelOuter[0] = tess_lv_0;

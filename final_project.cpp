@@ -63,6 +63,7 @@ glm::vec2 cur_mouse_pos = glm::vec2(0.0f, 0.0f);
 glm::vec2 prev_mouse_pos = glm::vec2(0.0f, 0.0f);
 glm::vec2 cam_angle = glm::vec2(0.0f, 0.0f);
 glm::vec2 scene_offset = glm::vec2(0.0f, 0.0f);
+glm::vec3 cam_pos;
 float cam_dist = 2.0f;
 bool turning = false;
 bool dragging = false;
@@ -70,8 +71,8 @@ bool dragging = false;
 bool check_framebuffer_status();
 
 bool recording = false;
-float stroke_width = 0.01;
-float stroke_inter = 0.01;
+float stroke_width = 0.07;
+float stroke_inter = 0.03;
 
 void draw_gui()
 {
@@ -101,11 +102,14 @@ void draw_gui()
 		}
 	}
 
-	ImGui::SliderFloat("Stroke width", &stroke_width, 0.01, 0.1);
+	ImGui::SliderFloat("Stroke width", &stroke_width, 0.02, 0.1);
 	ImGui::SliderFloat("Stroke interval", &stroke_inter, 0.01, 0.1);
-	ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
+	/*ImGui::Image((void*)original_render_texture, ImVec2(102, 76));
 	ImGui::SameLine(150);
-	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));
+	ImGui::Image((void*)original_depth_texture, ImVec2(102, 76));*/
+	ImGui::Image((void*)original_render_texture, ImVec2(306, 228));
+	ImGui::SameLine(450);
+	ImGui::Image((void*)original_depth_texture, ImVec2(306, 228));
 
 	ImGui::Render();
 }
@@ -113,10 +117,10 @@ void draw_gui()
 void draw_pass_1()
 {
 	glm::vec4 cam_up = glm::rotate(cam_angle.y * 180.0f / PI, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(0.0f, scene_offset.y, 0.0f, 0.0f);
+	cam_pos = glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y));
 	glm::mat4 M = glm::translate(glm::vec3(0.0, -cam_up.y, cam_up.z)) * glm::rotate(cam_angle.x * 180.0f / PI,
 		glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data2.mScaleFactor));
-	glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y)),
-		glm::vec3(scene_offset.x, 0.0, 0.0), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 V = glm::lookAt(cam_pos, glm::vec3(scene_offset.x, 0.0, 0.0), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -133,6 +137,12 @@ void draw_pass_1()
 	{
 		glm::mat4 PVM = P * V * M;
 		glUniformMatrix4fv(PVM_loc, 1, false, glm::value_ptr(PVM));
+	}
+
+	int M_loc = glGetUniformLocation(shader_program1, "M");
+	if (M_loc != -1)
+	{
+		glUniformMatrix4fv(M_loc, 1, false, glm::value_ptr(M));
 	}
 
 	int d_tex_loc = glGetUniformLocation(shader_program1, "d_texture");
@@ -159,6 +169,12 @@ void draw_pass_1()
 		glUniform1i(m_tex_loc, 3);
 	}
 
+	int cam_pos_loc = glGetUniformLocation(shader_program1, "cam_pos");
+	if (cam_pos_loc != -1)
+	{
+		glUniform3fv(cam_pos_loc, 1, glm::value_ptr(cam_pos));
+	}
+
 	glBindVertexArray(house_mesh_data1.mVao);
 	glDrawElements(GL_TRIANGLES, house_mesh_data1.mNumIndices, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
@@ -167,10 +183,10 @@ void draw_pass_1()
 void draw_pass_2()
 {
 	glm::vec4 cam_up = glm::rotate(cam_angle.y * 180.0f / PI, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(0.0f, scene_offset.y, 0.0f, 0.0f);
-	glm::mat4 M = glm::translate(glm::vec3(0.0, -cam_up.y, cam_up.z)) * glm::rotate(cam_angle.x * 180.0f / PI, 
+	cam_pos = glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y), cam_dist * cos(cam_angle.y));
+	glm::mat4 M = glm::translate(glm::vec3(0.0, -cam_up.y, cam_up.z)) * glm::rotate(cam_angle.x * 180.0f / PI,
 		glm::vec3(0.0f, 1.0f, 0.0f)) * glm::scale(glm::vec3(house_mesh_data2.mScaleFactor));
-	glm::mat4 V = glm::lookAt(glm::vec3(scene_offset.x, cam_dist * sin(cam_angle.y) , cam_dist * cos(cam_angle.y)) , 
-		glm::vec3(scene_offset.x, 0.0, 0.0), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 V = glm::lookAt(cam_pos, glm::vec3(scene_offset.x, 0.0, 0.0), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 P = glm::perspective(40.0f, 1.0f, 0.1f, 100.0f);
 
 	int PVM_loc = glGetUniformLocation(shader_program2, "PVM");

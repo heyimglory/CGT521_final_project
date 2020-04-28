@@ -12,7 +12,7 @@ out vec4 fragcolor;
       
 void main(void)
 {
-	fragcolor = vec4(color.rgb, texture2D(stroke_texture, tex_coord).r);
+	fragcolor = vec4(color.rgb, 0.8 * texture2D(stroke_texture, tex_coord).r);
 }
 
 
